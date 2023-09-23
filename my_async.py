@@ -19,6 +19,7 @@ data = defaultdict(MyTask)
 results = {}
 
 
+
 async def waiter(event):
     await event.wait()
 
@@ -31,18 +32,22 @@ async def download(url, n):
         else:
             data[url].waiter_task = asyncio.create_task(waiter(event))
             async with session.get(url) as response:
+
                 data[url].downloads += 1
                 data[url].text = await response.text()
                 event.set()
         results[(url, n)] = data[url].text[n]
 
 
-async def main():
-    await asyncio.gather(*(download(url, n) for url, n in sites))
+async def main(sites_num):
+    await asyncio.gather(*(download(url, n) for url, n in (sites[:sites_num] if sites_num else sites)))
     assert set(elem.downloads for elem in data.values()) == {1}
     return results
 
 
 @timer
-def my_async_main():
-    return asyncio.run(main())
+def my_async_main(sites_num):
+    print("sites num: " + str(sites_num))
+    return asyncio.run(main(sites_num))
+
+
