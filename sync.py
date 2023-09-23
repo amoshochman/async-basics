@@ -1,6 +1,6 @@
 import requests
 import time
-from urls import sites
+from sites import sites
 
 total = 0
 

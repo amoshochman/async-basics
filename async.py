@@ -1,10 +1,8 @@
-import os
-import shutil
 from collections import defaultdict
 
 import aiohttp
 import asyncio
-from urls import sites
+from sites import sites
 import time
 
 
@@ -25,27 +23,16 @@ async def waiter(event):
 async def download(url, n):
     async with aiohttp.ClientSession() as session:
         event = asyncio.Event()
-        filename = unique_filename(url)
-        if url not in saving_dict:
+        if url in saving_dict:
+            await saving_dict[url].waiter_task
+        else:
             saving_dict[url].waiter_task = asyncio.create_task(waiter(event))
             async with session.get(url) as response:
                 html = await response.text()
-                with open('data/' + filename, 'w') as file:
-                    file.write(html)
-                    saving_dict[filename].downloads += 1
+                saving_dict[url].downloads += 1
+                saving_dict[url].text = html
                 event.set()
-                print("The requested char is " + html[n])
-        else:
-            await saving_dict[url].waiter_task
-            with open('data/' + filename) as file:
-                kk = file.read()
-                print("The requested char is " + kk[n])
-
-
-def unique_filename(url):
-    url_without_protocol = url.replace('http://', '').replace('https://', '')
-    sanitized_url = url_without_protocol.replace('/', '_').replace('.', '_')
-    return sanitized_url + '.html'
+        print("The requested char is " + saving_dict[url].text[n])
 
 
 async def main():
@@ -53,9 +40,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    folder = 'data'
-    shutil.rmtree(folder)
-    os.mkdir(folder)
     s = time.perf_counter()
     asyncio.run(main())
     elapsed = time.perf_counter() - s
