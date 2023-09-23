@@ -1,16 +1,13 @@
 import requests
-import time
 from sites import sites
+from timer import timer
 
-total = 0
-
+results = {}
 
 def download_site(url, n, session):
     with session.get(url) as response:
         html = response.content.decode('utf-8')
-        global total
-        total += len(html)
-        print("The requested char is " + html[n])
+        results[(url, n)] = html[n]
 
 
 def download_all_sites(sites):
@@ -18,9 +15,8 @@ def download_all_sites(sites):
         for url, n in sites:
             download_site(url, n, session)
 
-
-if __name__ == "__main__":
-    start_time = time.time()
+@timer
+def my_sync_main():
     download_all_sites(sites)
-    duration = time.time() - start_time
-    print(f"Downloaded {len(sites)} in {duration} seconds" + ", total=" + str(total))
+    return results
+
