@@ -6,6 +6,8 @@ from sites import sites
 
 from timer import timer
 
+TASKS_NUM = 10
+
 
 class MyTask:
     def __init__(self):
@@ -49,7 +51,7 @@ async def gather_with_concurrency(n, *coros):
 
 
 async def main(sites_num):
-    await asyncio.gather(*(download(url, n) for url, n in sites[:sites_num]))
+    await gather_with_concurrency(TASKS_NUM, *(download(url, n) for url, n in sites[:sites_num]))
     assert set(elem.downloads for elem in data.values()) == {1}
     return results
 
