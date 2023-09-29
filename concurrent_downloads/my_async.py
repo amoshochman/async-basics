@@ -12,6 +12,8 @@ my_dict = {}
 
 results = {}
 
+TASKS_NUM = 10
+
 
 class MyTask:
     def __init__(self):
@@ -60,8 +62,8 @@ async def main() -> None:
     pending = set()
     for task in tasks:
         pending.add(asyncio.ensure_future(task))
-        if len(pending) >= 10:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if len(pending) >= TASKS_NUM:
+            done, pending = await asyncio.wait(pending)  # , return_when=asyncio.FIRST_COMPLETED)
     if pending:
         await asyncio.wait(pending)
     print("after the gather... tasks num:" + str(len(asyncio.all_tasks())))
@@ -71,4 +73,3 @@ if __name__ == '__main__':
     shutil.rmtree(OUTPUT_FOLDER, ignore_errors=True)
     os.mkdir(OUTPUT_FOLDER)
     asyncio.run(main())
-
