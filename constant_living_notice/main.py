@@ -1,8 +1,6 @@
 import multiprocessing
 import time
 
-computation_is_done = False
-
 
 def heavy_computation(computation_done_event):
     result = 0
@@ -17,8 +15,7 @@ def constant_print_update(computation_done_event):
         time.sleep(5)
 
 
-def my_test(package, entity):
-    print("testing " + str(entity))
+if __name__ == "__main__":
     computation_done_event = multiprocessing.Event()
     start = time.time()
     p1 = multiprocessing.Process(target=heavy_computation, args=(computation_done_event,))
@@ -27,8 +24,3 @@ def my_test(package, entity):
     p.start()
     p1.join()
     p.join()
-    print("time passed: " + str(round(time.time() - start, 2)))
-
-
-if __name__ == "__main__":
-    my_test(multiprocessing, multiprocessing.Process)
