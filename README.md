@@ -1,6 +1,6 @@
 # async-basics
 
-### Two small exercise to practice concurrency in Python:
+### Two small exercises to practice concurrency in Python:
 - concurrent_downloads
 - constant_living_notice
 
