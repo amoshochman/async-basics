@@ -1,12 +1,16 @@
-from collections import defaultdict
+import asyncio
+import os
+import shutil
 
 import aiohttp
-import asyncio
-from concurrent_downloads.data.sites import sites
 
-from timer import timer
+from concurrent_downloads.data.peps import peps
 
-TASKS_NUM = 10
+OUTPUT_FOLDER = "data_output"
+
+my_dict = {}
+
+results = {}
 
 
 class MyTask:
@@ -16,38 +20,55 @@ class MyTask:
         self.downloads = 0
 
 
-data = defaultdict(MyTask)
-
-results = {}
-
-
-async def waiter(event):
-    await event.wait()
-
-
-async def download(url, n):
+async def download_page(pep_number: int) -> bytes:
     print("tasks num:" + str(len(asyncio.all_tasks())))
+    url = f"https://www.python.org/dev/peps/pep-{pep_number}/"
     async with aiohttp.ClientSession() as session:
-        event = asyncio.Event()
-        if url not in data:
-            data[url].waiter_task = asyncio.create_task(waiter(event))
-            async with session.get(url) as response:
-                data[url].downloads += 1
-                data[url].text = await response.text()
-                event.set()
-        elif not data[url].text:
-            await data[url].waiter_task
-        results[(url, n)] = data[url].text[n]
+        async with session.get(url) as resp:
+            content = await resp.read()
+            return content
 
 
+async def download(pep_number: int, n: int) -> None:
+    print("tasks num:" + str(len(asyncio.all_tasks())))
+    if pep_number in my_dict:
+        await my_dict[pep_number]
+        filename = get_filename(pep_number)
+        with open(get_output_filepath(filename)) as pep_file:
+            content = pep_file.read()
+    else:
+        my_dict[pep_number] = asyncio.current_task()
+        content = await download_page(pep_number)
+        filename = get_filename(pep_number)
+        with open(get_output_filepath(filename), "wb") as pep_file:
+            pep_file.write(content)
+    results[(pep_number, n)] = content[n]
 
-async def main(sites_num):
-    await asyncio.gather(*(download(url, n) for url, n in sites[:sites_num]))
-    assert set(elem.downloads for elem in data.values()) == {1}
-    return results
+
+def get_output_filepath(filename):
+    return OUTPUT_FOLDER + "/" + filename
 
 
-@timer
-def my_async_main(sites_num):
-    print("sites num: " + str(sites_num))
-    return asyncio.run(main(sites_num))
+def get_filename(pep_number):
+    filename = f"async_{pep_number}.html"
+    return filename
+
+
+async def main() -> None:
+    print("before the gather tasks num:" + str(len(asyncio.all_tasks())))
+    tasks = [download(pep, n) for (pep, n) in peps]
+    pending = set()
+    for task in tasks:
+        pending.add(asyncio.ensure_future(task))
+        if len(pending) >= 10:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+    if pending:
+        await asyncio.wait(pending)
+    print("after the gather... tasks num:" + str(len(asyncio.all_tasks())))
+
+
+if __name__ == '__main__':
+    shutil.rmtree(OUTPUT_FOLDER, ignore_errors=True)
+    os.mkdir(OUTPUT_FOLDER)
+    asyncio.run(main())
+
