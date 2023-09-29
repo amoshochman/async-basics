@@ -1,5 +1,5 @@
 import requests
-from sites import sites
+from concurrent_downloads.data.sites import sites
 from timer import timer
 
 results = {}

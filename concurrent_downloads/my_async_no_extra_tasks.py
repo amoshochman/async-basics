@@ -5,7 +5,7 @@ import time
 
 import aiohttp
 
-from concurrent_downloads.peps import peps
+from concurrent_downloads.data.peps import peps
 
 my_dict = {}
 

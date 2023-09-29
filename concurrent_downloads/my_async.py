@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import aiohttp
 import asyncio
-from sites import sites
+from concurrent_downloads.data.sites import sites
 
 from timer import timer
 
