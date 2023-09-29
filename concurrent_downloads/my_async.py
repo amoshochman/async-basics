@@ -1,6 +1,7 @@
 import asyncio
 import os
 import shutil
+import time
 
 import aiohttp
 
@@ -31,19 +32,28 @@ async def download_page(pep_number: int) -> bytes:
             return content
 
 
-async def download(pep_number: int, n: int) -> None:
-    print("tasks num:" + str(len(asyncio.all_tasks())))
-    if pep_number in my_dict:
-        await my_dict[pep_number]
-        filename = get_filename(pep_number)
-        with open(get_output_filepath(filename)) as pep_file:
-            content = pep_file.read()
-    else:
+async def download(lock, pep_number: int, n: int) -> None:
+    #print("tasks num:" + str(len(asyncio.all_tasks())))
+
+    download = False
+    async with lock:
+        if pep_number not in my_dict:
+            my_dict[pep_number] = asyncio.current_task()
+            download = True
+
+    if download:
         my_dict[pep_number] = asyncio.current_task()
         content = await download_page(pep_number)
         filename = get_filename(pep_number)
         with open(get_output_filepath(filename), "wb") as pep_file:
             pep_file.write(content)
+
+    else:
+        await my_dict[pep_number]
+        filename = get_filename(pep_number)
+        with open(get_output_filepath(filename)) as pep_file:
+            content = pep_file.read()
+
     results[(pep_number, n)] = content[n]
 
 
@@ -57,8 +67,9 @@ def get_filename(pep_number):
 
 
 async def main() -> None:
-    print("before the gather tasks num:" + str(len(asyncio.all_tasks())))
-    tasks = [download(pep, n) for (pep, n) in peps]
+    #print("before the gather tasks num:" + str(len(asyncio.all_tasks())))
+    lock = asyncio.Lock()
+    tasks = [download(lock, pep, n) for (pep, n) in peps[:15]]
     pending = set()
     for task in tasks:
         pending.add(asyncio.ensure_future(task))
@@ -66,10 +77,12 @@ async def main() -> None:
             done, pending = await asyncio.wait(pending)  # , return_when=asyncio.FIRST_COMPLETED)
     if pending:
         await asyncio.wait(pending)
-    print("after the gather... tasks num:" + str(len(asyncio.all_tasks())))
+    #print("after the gather... tasks num:" + str(len(asyncio.all_tasks())))
 
 
 if __name__ == '__main__':
+    start = time.time()
     shutil.rmtree(OUTPUT_FOLDER, ignore_errors=True)
     os.mkdir(OUTPUT_FOLDER)
     asyncio.run(main())
+    print("Total time: " + str(round(time.time() - start, 2)))
