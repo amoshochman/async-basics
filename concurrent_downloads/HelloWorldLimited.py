@@ -1,28 +1,30 @@
 import asyncio
 
+global_counter = 0
 
 async def count():
     print("tasks num:" + str(len(asyncio.all_tasks())))
     print("One")
-    await asyncio.sleep(1)
+    await asyncio.sleep(5)
+    global global_counter
+    global_counter += 1
+    await asyncio.sleep(global_counter * 2)
+    # if global_counter in [1,2,3]:
+    #     await asyncio.sleep(10)
+    # else:
+    #    await asyncio.sleep(1)
     print("Two")
 
 
-async def limit_concurrency(tasks, limit):
+async def main():
+    tasks = [count() for i in range(6)]
     pending = set()
     for task in tasks:
         pending.add(asyncio.ensure_future(task))
-        if len(pending) >= limit:
-            done, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_COMPLETED
-            )
-
-    await asyncio.wait(pending)
-
-
-async def main():
-    tasks = [count(), count(), count()]
-    await limit_concurrency(tasks, 2)  # Limit the number of tasks to 2
+        if len(pending) >= 3:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+    if pending:
+        await asyncio.wait(pending)
 
 
 if __name__ == "__main__":

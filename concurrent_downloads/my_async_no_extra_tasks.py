@@ -7,6 +7,8 @@ import aiohttp
 
 from concurrent_downloads.data.peps import peps
 
+OUTPUT_FOLDER = "data_output"
+
 my_dict = {}
 
 results = {}
@@ -30,7 +32,7 @@ async def download_page(pep_number: int) -> bytes:
 async def write_to_file(pep_number: int, content: bytes) -> None:
     print("tasks num:" + str(len(asyncio.all_tasks())))
     filename = f"async_{pep_number}.html"
-    with open("data/" + filename, "wb") as pep_file:
+    with open(OUTPUT_FOLDER + "/" + filename, "wb") as pep_file:
         pep_file.write(content)
 
 
@@ -39,7 +41,7 @@ async def web_scrape_task(pep_number: int, n: int) -> None:
     if pep_number in my_dict:
         await my_dict[pep_number]
         filename = f"async_{pep_number}.html"
-        with open("data/" + filename) as pep_file:
+        with open(OUTPUT_FOLDER + "/" + filename) as pep_file:
             content = pep_file.read()
     else:
         my_dict[pep_number] = asyncio.current_task()
@@ -47,26 +49,19 @@ async def web_scrape_task(pep_number: int, n: int) -> None:
         await write_to_file(pep_number, content)
     results[(pep_number, n)] = content[n]
 
-async def gather_with_concurrency(n, *coros):
-    semaphore = asyncio.Semaphore(n)
-    async def sem_coro(coro):
-        async with semaphore:
-            return await coro
-    return await asyncio.gather(*(sem_coro(c) for c in coros))
 
 
 async def main() -> None:
     print("tasks num:" + str(len(asyncio.all_tasks())))
-    #await gather_with_concurrency(10, *(web_scrape_task(pep, n) for (pep, n) in peps))
     tasks = [web_scrape_task(pep, n) for (pep, n) in peps]
-    await gather_with_concurrency(10, *tasks)
+    await asyncio.gather(*tasks)
     print("after the gather... tasks num:" + str(len(asyncio.all_tasks())))
 
 
 if __name__ == "__main__":
     s = time.perf_counter()
-    shutil.rmtree("data", ignore_errors=True)
-    os.mkdir("data")
+    shutil.rmtree(OUTPUT_FOLDER, ignore_errors=True)
+    os.mkdir(OUTPUT_FOLDER)
     asyncio.run(main())
 
     elapsed = time.perf_counter() - s

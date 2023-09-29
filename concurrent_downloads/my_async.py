@@ -40,18 +40,9 @@ async def download(url, n):
         results[(url, n)] = data[url].text[n]
 
 
-async def gather_with_concurrency(n, *coros):
-    semaphore = asyncio.Semaphore(n)
-
-    async def sem_coro(coro):
-        async with semaphore:
-            return await coro
-
-    return await asyncio.gather(*(sem_coro(c) for c in coros))
-
 
 async def main(sites_num):
-    await gather_with_concurrency(TASKS_NUM, *(download(url, n) for url, n in sites[:sites_num]))
+    await asyncio.gather(*(download(url, n) for url, n in sites[:sites_num]))
     assert set(elem.downloads for elem in data.values()) == {1}
     return results
 
